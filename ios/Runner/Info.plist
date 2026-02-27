@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Instrutor Legal Pro</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Instrutor Legal Pro</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<!-- Permissões de Localização -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Este app usa sua localização para compartilhar sua posição em mensagens e melhorar sua experiência</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Este app usa sua localização em segundo plano para funcionalidades avançadas</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Este app usa sua localização em segundo plano</string>
+
+	<!-- Permissões de Câmera e Galeria -->
+	<key>NSCameraUsageDescription</key>
+	<string>Este app precisa acessar sua câmera para tirar fotos</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Este app precisa acessar sua galeria para selecionar fotos</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Este app precisa salvar fotos em sua galeria</string>
+
+	<!-- Permissões de Notificações -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- Permissão de Microfone (para futuras chamadas) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Este app precisa acessar seu microfone para gravações de áudio</string>
+
+	<!-- Permissão de Contatos (se necessário) -->
+	<key>NSContactsUsageDescription</key>
+	<string>Este app precisa acessar seus contatos para facilitar o compartilhamento</string>
+</dict>
+</plist>

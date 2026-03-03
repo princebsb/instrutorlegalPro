@@ -1,12 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../../shared/widgets/custom_button.dart';
@@ -37,13 +41,26 @@ class _PerfilScreenState extends State<PerfilScreen> {
   final _biografiaController = TextEditingController();
   final _valorAulaController = TextEditingController();
 
-  final _phoneMask = MaskTextInputFormatter(mask: '(##) #####-####');
-  final _cpfMask = MaskTextInputFormatter(mask: '###.###.###-##');
-  final _cepMask = MaskTextInputFormatter(mask: '#####-###');
-  final _dataMask = MaskTextInputFormatter(mask: '##/##/####');
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final _cpfMask = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final _cepMask = MaskTextInputFormatter(
+    mask: '#####-###',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final _dataMask = MaskTextInputFormatter(
+    mask: '##/##/####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
   bool _isLoading = false;
   bool _isEditing = false;
+  bool _isLoadingCep = false;
 
   // Dados do instrutor
   List<String> _categoriasHabilitadas = [];
@@ -59,10 +76,20 @@ class _PerfilScreenState extends State<PerfilScreen> {
   void initState() {
     super.initState();
     _loadPerfil();
+    _cepController.addListener(_onCepChanged);
+  }
+
+  void _onCepChanged() {
+    if (!_isEditing || _isLoadingCep) return;
+    final cep = _cepController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cep.length == 8) {
+      _buscarCep(cep);
+    }
   }
 
   @override
   void dispose() {
+    _cepController.removeListener(_onCepChanged);
     _nomeController.dispose();
     _emailController.dispose();
     _telefoneController.dispose();
@@ -78,6 +105,111 @@ class _PerfilScreenState extends State<PerfilScreen> {
     _biografiaController.dispose();
     _valorAulaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _buscarCep(String cep) async {
+    if (!mounted) return;
+    setState(() => _isLoadingCep = true);
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://brasilapi.com.br/api/cep/v1/$cep'),
+        headers: {
+          'Accept': 'application/json',
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        setState(() {
+          _enderecoController.text = data['street'] ?? '';
+          _bairroController.text = data['neighborhood'] ?? '';
+          _cidadeController.text = data['city'] ?? '';
+          _estadoController.text = data['state'] ?? '';
+        });
+      } else if (response.statusCode == 404) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('CEP não encontrado'), backgroundColor: AppColors.warning),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao buscar CEP: ${response.statusCode}'), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro de conexão: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingCep = false);
+    }
+  }
+
+  bool _validarCpf(String cpf) {
+    // Remove caracteres não numéricos
+    cpf = cpf.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (cpf.length != 11) return false;
+
+    // Verifica se todos os dígitos são iguais
+    if (RegExp(r'^(\d)\1{10}$').hasMatch(cpf)) return false;
+
+    // Validação do primeiro dígito verificador
+    int soma = 0;
+    for (int i = 0; i < 9; i++) {
+      soma += int.parse(cpf[i]) * (10 - i);
+    }
+    int resto = soma % 11;
+    int digito1 = resto < 2 ? 0 : 11 - resto;
+
+    if (int.parse(cpf[9]) != digito1) return false;
+
+    // Validação do segundo dígito verificador
+    soma = 0;
+    for (int i = 0; i < 10; i++) {
+      soma += int.parse(cpf[i]) * (11 - i);
+    }
+    resto = soma % 11;
+    int digito2 = resto < 2 ? 0 : 11 - resto;
+
+    if (int.parse(cpf[10]) != digito2) return false;
+
+    return true;
+  }
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sair da Conta'),
+        content: const Text('Deseja realmente sair da sua conta?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await context.read<AuthProvider>().logout();
+      if (mounted) {
+        context.go(AppRoutes.login);
+      }
+    }
   }
 
   Future<void> _loadPerfil() async {
@@ -137,10 +269,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final success = await authProvider.updateProfile({
       'nome_completo': _nomeController.text,
       'email': _emailController.text,
-      'telefone': _telefoneController.text.replaceAll(RegExp(r'\D'), ''),
-      'cpf': _cpfController.text.replaceAll(RegExp(r'\D'), ''),
+      'telefone': _phoneMask.getUnmaskedText(),
+      'cpf': _cpfMask.getUnmaskedText(),
       'data_nascimento': _dataNascController.text,
-      'cep': _cepController.text.replaceAll(RegExp(r'\D'), ''),
+      'cep': _cepMask.getUnmaskedText(),
       'endereco': _enderecoController.text,
       'numero': _numeroController.text,
       'complemento': _complementoController.text,
@@ -281,6 +413,18 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       keyboardType: TextInputType.number,
                       prefixIcon: const Icon(Icons.badge_outlined),
                       inputFormatters: [_cpfMask],
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          final cpf = _cpfMask.getUnmaskedText();
+                          if (cpf.length < 11) {
+                            return 'CPF incompleto';
+                          }
+                          if (!_validarCpf(cpf)) {
+                            return 'CPF inválido';
+                          }
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ],
@@ -312,6 +456,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       enabled: _isEditing,
                       keyboardType: TextInputType.number,
                       inputFormatters: [_cepMask],
+                      suffixIcon: _isLoadingCep
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -442,6 +596,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   isLoading: _isLoading,
                   icon: Icons.save,
                 ),
+
+              const SizedBox(height: 24),
+
+              // Botão Sair da Conta
+              CustomButton(
+                text: 'Sair da Conta',
+                onPressed: _handleLogout,
+                variant: ButtonVariant.outline,
+                icon: Icons.logout,
+              ),
 
               const SizedBox(height: 100),
             ],

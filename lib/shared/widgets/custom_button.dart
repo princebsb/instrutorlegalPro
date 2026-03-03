@@ -29,132 +29,166 @@ class CustomButton extends StatelessWidget {
     this.customColor,
   });
 
+  Color _getForegroundColor() {
+    switch (variant) {
+      case ButtonVariant.primary:
+      case ButtonVariant.danger:
+        return AppColors.white;
+      case ButtonVariant.secondary:
+      case ButtonVariant.outline:
+      case ButtonVariant.text:
+        return customColor ?? AppColors.primary;
+    }
+  }
+
+  Color _getBackgroundColor() {
+    switch (variant) {
+      case ButtonVariant.primary:
+        return customColor ?? AppColors.primary;
+      case ButtonVariant.secondary:
+        return AppColors.primarySurface;
+      case ButtonVariant.outline:
+      case ButtonVariant.text:
+        return Colors.transparent;
+      case ButtonVariant.danger:
+        return AppColors.error;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final buttonStyle = _getButtonStyle();
-    final textStyle = _getTextStyle();
-    final padding = _getPadding();
     final height = _getHeight();
+    final fgColor = _getForegroundColor();
+    final bgColor = _getBackgroundColor();
 
-    Widget child = Row(
+    final buttonContent = Row(
       mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (isLoading)
           SizedBox(
-            width: 20, height: 20,
+            width: 20,
+            height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                variant == ButtonVariant.primary ? AppColors.white : AppColors.primary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(fgColor),
             ),
           )
         else ...[
           if (icon != null) ...[
-            Icon(icon, size: _getIconSize()),
+            Icon(icon, size: _getIconSize(), color: fgColor),
             const SizedBox(width: 8),
           ],
-          Text(text, style: textStyle),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: _getFontSize(),
+                fontWeight: FontWeight.w600,
+                color: fgColor,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           if (trailingIcon != null) ...[
             const SizedBox(width: 8),
-            Icon(trailingIcon, size: _getIconSize()),
+            Icon(trailingIcon, size: _getIconSize(), color: fgColor),
           ],
         ],
       ],
     );
 
+    // Estilo com padding explícito para sobrescrever o tema e evitar padding duplo
+    final baseStyle = ButtonStyle(
+      backgroundColor: WidgetStateProperty.all(bgColor),
+      foregroundColor: WidgetStateProperty.all(fgColor),
+      elevation: WidgetStateProperty.all(0.0),
+      padding: WidgetStateProperty.all(_getPadding()),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      side: variant == ButtonVariant.outline
+          ? WidgetStateProperty.all(
+              BorderSide(color: customColor ?? AppColors.primary, width: 1.5),
+            )
+          : null,
+    );
+
     switch (variant) {
       case ButtonVariant.primary:
-        return SizedBox(
-          width: fullWidth ? double.infinity : null, height: height,
-          child: ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: buttonStyle,
-            child: Padding(padding: padding, child: child),
-          ),
-        );
       case ButtonVariant.secondary:
+      case ButtonVariant.danger:
         return SizedBox(
-          width: fullWidth ? double.infinity : null, height: height,
+          width: fullWidth ? double.infinity : null,
+          height: height,
           child: ElevatedButton(
             onPressed: isLoading ? null : onPressed,
-            style: buttonStyle.copyWith(
-              backgroundColor: WidgetStateProperty.all(AppColors.primarySurface),
-              foregroundColor: WidgetStateProperty.all(AppColors.primary),
-            ),
-            child: Padding(padding: padding, child: child),
+            style: baseStyle,
+            child: buttonContent,
           ),
         );
+
       case ButtonVariant.outline:
         return SizedBox(
-          width: fullWidth ? double.infinity : null, height: height,
+          width: fullWidth ? double.infinity : null,
+          height: height,
           child: OutlinedButton(
             onPressed: isLoading ? null : onPressed,
-            style: buttonStyle,
-            child: Padding(padding: padding, child: child),
+            style: baseStyle,
+            child: buttonContent,
           ),
         );
+
       case ButtonVariant.text:
         return TextButton(
           onPressed: isLoading ? null : onPressed,
-          style: buttonStyle,
-          child: Padding(padding: padding, child: child),
-        );
-      case ButtonVariant.danger:
-        return SizedBox(
-          width: fullWidth ? double.infinity : null, height: height,
-          child: ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            style: buttonStyle.copyWith(
-              backgroundColor: WidgetStateProperty.all(AppColors.error),
-            ),
-            child: Padding(padding: padding, child: child),
-          ),
+          style: baseStyle,
+          child: buttonContent,
         );
     }
   }
 
-  ButtonStyle _getButtonStyle() {
-    return ElevatedButton.styleFrom(
-      backgroundColor: customColor ?? AppColors.primary,
-      foregroundColor: AppColors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    );
-  }
-
-  TextStyle _getTextStyle() {
-    double fontSize;
+  double _getFontSize() {
     switch (size) {
-      case ButtonSize.small: fontSize = 13; break;
-      case ButtonSize.medium: fontSize = 15; break;
-      case ButtonSize.large: fontSize = 17; break;
+      case ButtonSize.small:
+        return 13;
+      case ButtonSize.medium:
+        return 15;
+      case ButtonSize.large:
+        return 17;
     }
-    return TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600);
   }
 
   EdgeInsets _getPadding() {
     switch (size) {
-      case ButtonSize.small: return const EdgeInsets.symmetric(horizontal: 12, vertical: 4);
-      case ButtonSize.medium: return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
-      case ButtonSize.large: return const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
+      case ButtonSize.small:
+        return const EdgeInsets.symmetric(horizontal: 12, vertical: 4);
+      case ButtonSize.medium:
+        return const EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+      case ButtonSize.large:
+        return const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
     }
   }
 
   double _getHeight() {
     switch (size) {
-      case ButtonSize.small: return 40;
-      case ButtonSize.medium: return 52;
-      case ButtonSize.large: return 60;
+      case ButtonSize.small:
+        return 40;
+      case ButtonSize.medium:
+        return 52;
+      case ButtonSize.large:
+        return 60;
     }
   }
 
   double _getIconSize() {
     switch (size) {
-      case ButtonSize.small: return 16;
-      case ButtonSize.medium: return 20;
-      case ButtonSize.large: return 24;
+      case ButtonSize.small:
+        return 16;
+      case ButtonSize.medium:
+        return 20;
+      case ButtonSize.large:
+        return 24;
     }
   }
 }
@@ -180,13 +214,18 @@ class IconButtonRound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = Container(
-      width: size, height: size,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: backgroundColor ?? AppColors.primarySurface,
         shape: BoxShape.circle,
       ),
       child: IconButton(
-        icon: Icon(icon, color: iconColor ?? AppColors.primary, size: size * 0.5),
+        icon: Icon(
+          icon,
+          color: iconColor ?? AppColors.primary,
+          size: size * 0.5,
+        ),
         onPressed: onPressed,
         padding: EdgeInsets.zero,
       ),

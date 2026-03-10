@@ -268,7 +268,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildStatsCards() {
     final avaliacao = (_estatisticas['avaliacaoMedia'] ?? 0.0).toDouble();
-    final receita = (_estatisticas['receitaMensal'] ?? 0.0).toDouble();
 
     final stats = [
       {
@@ -290,9 +289,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'color': AppColors.warning,
       },
       {
-        'icon': Icons.attach_money,
-        'label': 'Receita Mensal',
-        'value': receita > 0 ? 'R\$ ${receita.toStringAsFixed(0)}' : 'R\$ 0',
+        'icon': Icons.trending_up,
+        'label': 'Aulas no Mês',
+        'value': '${_desempenho['aulasRealizadasMes'] ?? 0}',
         'color': AppColors.primary,
       },
     ];

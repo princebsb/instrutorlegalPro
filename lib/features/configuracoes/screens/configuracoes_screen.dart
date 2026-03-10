@@ -167,8 +167,8 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen>
             true,
           ),
           _buildNotificationToggle(
-            'Pagamentos Recebidos',
-            Icons.payment_outlined,
+            'Aulas Concluídas',
+            Icons.check_circle_outline,
             true,
           ),
           _buildNotificationToggle(

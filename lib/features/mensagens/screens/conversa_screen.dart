@@ -13,11 +13,13 @@ import '../../../core/constants/app_constants.dart';
 class ConversaScreen extends StatefulWidget {
   final String conversaId;
   final String nomeContato;
+  final bool banido;
 
   const ConversaScreen({
     super.key,
     required this.conversaId,
     required this.nomeContato,
+    this.banido = false,
   });
 
   @override
@@ -33,11 +35,13 @@ class _ConversaScreenState extends State<ConversaScreen> {
   List<Map<String, dynamic>> _mensagens = [];
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isBanned = false;
   Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
+    _isBanned = widget.banido;
     _loadMensagens();
     _startPolling();
   }
@@ -79,26 +83,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      if (!silent) {
-        setState(() {
-          _mensagens = [
-            {
-              'id': '1',
-              'remetente_id': widget.conversaId,
-              'mensagem': 'Olá professor! Tudo bem?',
-              'data_envio': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-              'lida': true,
-            },
-            {
-              'id': '2',
-              'remetente_id': context.read<AuthProvider>().user?.id ?? '',
-              'mensagem': 'Tudo ótimo! Pronto para a aula de amanhã?',
-              'data_envio': DateTime.now().subtract(const Duration(hours: 1, minutes: 50)).toIso8601String(),
-              'lida': true,
-            },
-          ];
-        });
-      }
+      debugPrint('Erro ao carregar mensagens: $e');
     } finally {
       if (!silent) {
         setState(() => _isLoading = false);
@@ -121,7 +106,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if (text.isEmpty || _isSending || _isBanned) return;
 
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
@@ -135,13 +120,14 @@ class _ConversaScreenState extends State<ConversaScreen> {
       'mensagem': text,
       'data_envio': DateTime.now().toIso8601String(),
       'lida': false,
+      'enviada': true,
     };
 
     setState(() { _mensagens.add(tempMessage); });
     _scrollToBottom();
 
     try {
-      await _api.post(
+      final response = await _api.post(
         ApiEndpoints.enviarMensagem,
         body: {
           'remetente_id': user.id,
@@ -149,14 +135,106 @@ class _ConversaScreenState extends State<ConversaScreen> {
           'mensagem': text,
         },
       );
+
+      // Verificar se a mensagem foi censurada
+      if (response != null && response is Map) {
+        final censurada = response['censurada'] == true;
+        final alerta = response['alerta'];
+
+        if (censurada && alerta != null && mounted) {
+          final nivel = alerta['nivel'] ?? 0;
+          final mensagemAlerta = alerta['mensagem'] ?? '';
+
+          _showCensorAlert(nivel, mensagemAlerta);
+        }
+
+        // Verificar se foi banido
+        if (response['banido'] == true && mounted) {
+          setState(() => _isBanned = true);
+          _showBannedAlert();
+        }
+      }
     } catch (e) {
-      // Silencioso
+      // Verificar se erro é de banimento
+      if (e.toString().contains('banido') || e.toString().contains('403')) {
+        if (mounted) {
+          setState(() => _isBanned = true);
+          _showBannedAlert();
+        }
+      }
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
+  void _showCensorAlert(int nivel, String mensagem) {
+    Color backgroundColor;
+    IconData icon;
+
+    switch (nivel) {
+      case 1:
+        backgroundColor = Colors.orange.shade600;
+        icon = Icons.warning_amber;
+        break;
+      case 2:
+        backgroundColor = Colors.red.shade600;
+        icon = Icons.error;
+        break;
+      case 3:
+        backgroundColor = Colors.red.shade900;
+        icon = Icons.block;
+        break;
+      default:
+        backgroundColor = Colors.orange.shade600;
+        icon = Icons.warning_amber;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                mensagem,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        duration: Duration(seconds: nivel >= 2 ? 8 : 5),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showBannedAlert() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.block, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Sua conta foi suspensa por violar as regras da plataforma.',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red.shade900,
+        duration: const Duration(seconds: 10),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _sendLocation() async {
+    if (_isBanned) return;
+
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
 
@@ -194,6 +272,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
         'mensagem': locationMessage,
         'data_envio': DateTime.now().toIso8601String(),
         'lida': false,
+        'enviada': true,
       };
 
       setState(() { _mensagens.add(tempMessage); });
@@ -214,7 +293,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
         );
       }
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -229,17 +308,68 @@ class _ConversaScreenState extends State<ConversaScreen> {
           children: [
             Container(
               width: 40, height: 40,
-              decoration: const BoxDecoration(color: AppColors.primarySurface, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: _isBanned ? Colors.red : AppColors.primarySurface,
+                shape: BoxShape.circle,
+              ),
               child: Center(
                 child: Text(
                   widget.nomeContato[0].toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 18),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _isBanned ? Colors.white : AppColors.primary,
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(widget.nomeContato, overflow: TextOverflow.ellipsis),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          widget.nomeContato,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _isBanned ? Colors.red.shade700 : null,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (_isBanned) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'BANIDO',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (_isBanned)
+                    Text(
+                      'Usuário banido',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -248,6 +378,41 @@ class _ConversaScreenState extends State<ConversaScreen> {
       ),
       body: Column(
         children: [
+          // Banner de banimento
+          if (_isBanned)
+            Container(
+              padding: const EdgeInsets.all(12),
+              color: Colors.red.shade50,
+              child: Row(
+                children: [
+                  Icon(Icons.block, color: Colors.red.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Este aluno foi banido da plataforma',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Violou as regras ao compartilhar contatos.',
+                          style: TextStyle(
+                            color: Colors.red.shade600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -257,70 +422,118 @@ class _ConversaScreenState extends State<ConversaScreen> {
                     itemCount: _mensagens.length,
                     itemBuilder: (context, index) {
                       final mensagem = _mensagens[index];
-                      final isMe = mensagem['remetente_id'] == user?.id;
+                      // Backend retorna 'enviada' como boolean (true = instrutor enviou)
+                      final enviada = mensagem['enviada'];
+                      final isMe = enviada == true ||
+                                   enviada == 'true' ||
+                                   enviada == 1 ||
+                                   mensagem['remetente_id']?.toString() == user?.id;
                       return _buildMessage(mensagem, isMe);
                     },
                   ),
           ),
-          Container(
-            padding: EdgeInsets.only(
-              left: 16, right: 16, top: 12,
-              bottom: MediaQuery.of(context).padding.bottom + 12,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
+
+          // Input area
+          if (_isBanned)
+            Container(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 16,
+              ),
+              color: Colors.red.shade50,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.location_on_outlined),
-                  color: AppColors.primary,
-                  onPressed: _sendLocation,
-                  tooltip: 'Enviar localização',
-                ),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.gray100,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _focusNode,
-                      decoration: const InputDecoration(
-                        hintText: 'Digite sua mensagem...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  children: [
+                    Icon(Icons.block, color: Colors.red.shade500, size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Conversa bloqueada',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
                       ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Este aluno foi banido por violar as regras.',
+                      style: TextStyle(
+                        color: Colors.red.shade600,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: EdgeInsets.only(
+                left: 16, right: 16, top: 12,
+                bottom: MediaQuery.of(context).padding.bottom + 12,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.location_on_outlined),
+                    color: AppColors.primary,
+                    onPressed: _sendLocation,
+                    tooltip: 'Enviar localização',
+                  ),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.gray100,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _focusNode,
+                        decoration: const InputDecoration(
+                          hintText: 'Digite sua mensagem...',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: IconButton(
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.white)),
-                          )
-                        : const Icon(Icons.send),
-                    color: AppColors.white,
-                    onPressed: _sendMessage,
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: _isSending
+                          ? const SizedBox(
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.white)),
+                            )
+                          : const Icon(Icons.send),
+                      color: AppColors.white,
+                      onPressed: _sendMessage,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -328,7 +541,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
 
   Widget _buildMessage(Map<String, dynamic> mensagem, bool isMe) {
     final text = mensagem['mensagem'] ?? '';
-    final dataStr = mensagem['data_envio'];
+    final dataStr = mensagem['dataEnvio']?.toString() ?? mensagem['data_envio']?.toString();
     final data = dataStr != null ? DateTime.tryParse(dataStr) : null;
     final lida = mensagem['lida'] ?? false;
     final isLocation = text.startsWith('📍 Localização:');
@@ -340,7 +553,7 @@ class _ConversaScreenState extends State<ConversaScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isMe ? AppColors.primary : AppColors.white,
+          color: isMe ? AppColors.primary : AppColors.gray100,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),

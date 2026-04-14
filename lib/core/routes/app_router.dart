@@ -15,6 +15,7 @@ import '../../features/mensagens/screens/conversa_screen.dart';
 import '../../features/perfil/screens/perfil_screen.dart';
 import '../../features/configuracoes/screens/configuracoes_screen.dart';
 import '../../features/configuracoes/screens/alterar_senha_screen.dart';
+import '../../features/carteira/screens/carteira_screen.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -29,6 +30,7 @@ class AppRoutes {
   static const perfil = '/perfil';
   static const configuracoes = '/configuracoes';
   static const alterarSenha = '/alterar-senha';
+  static const carteira = '/carteira';
 }
 
 class AppRouter {
@@ -98,6 +100,7 @@ class AppRouter {
           return ConversaScreen(
             conversaId: conversaId,
             nomeContato: extra?['nomeContato'] ?? 'Conversa',
+            banido: extra?['banido'] ?? false,
           );
         },
       ),
@@ -112,6 +115,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.alterarSenha,
         builder: (context, state) => const AlterarSenhaScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.carteira,
+        builder: (context, state) => const CarteiraScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

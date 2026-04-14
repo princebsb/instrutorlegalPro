@@ -270,7 +270,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                       '${AppRoutes.conversa}/${aula['aluno_usuario_id']}',
                       extra: {
                         'nomeContato': aula['aluno'] ?? 'Aluno',
-                        'banido': false,
+                        'banido': aula['aluno_banido'] == true,
                         'temAulaPaga': true,
                       },
                     );

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../shared/widgets/bottom_nav_bar.dart';
 
 class AulasScreen extends StatefulWidget {
@@ -23,7 +25,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
   List<Map<String, dynamic>> _todasAulas = [];
   bool _isLoading = true;
 
-  final _filtros = ['Todas', 'Aguardando', 'Confirmadas', 'Realizadas', 'Canceladas'];
+  final _filtros = ['Todas', 'Agendadas', 'Confirmadas', 'Realizadas', 'Canceladas'];
 
   @override
   void initState() {
@@ -78,7 +80,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
     if (tabIndex == 0) return _todasAulas;
 
     final statusFiltro = {
-      1: 'aguardando',
+      1: 'agendada',
       2: 'confirmada',
       3: 'realizada',
       4: 'cancelada',
@@ -194,7 +196,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
   }
 
   Widget _buildAulaCard(Map<String, dynamic> aula) {
-    final dataHora = DateTime.tryParse(aula['data_hora'] ?? '') ?? DateTime.now();
+    final dataHora = DateTime.tryParse(aula['data'] ?? '') ?? DateTime.now();
     final status = (aula['status'] ?? 'aguardando').toString().toLowerCase();
     final valor = (aula['valor'] ?? 120.0).toDouble();
 
@@ -218,7 +220,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                 ),
                 child: Center(
                   child: Text(
-                    (aula['aluno_nome'] ?? 'A')[0].toUpperCase(),
+                    (aula['aluno'] ?? 'A')[0].toUpperCase(),
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -233,7 +235,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      aula['aluno_nome'] ?? 'Aluno',
+                      aula['aluno'] ?? 'Aluno',
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     const SizedBox(height: 2),
@@ -260,6 +262,22 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                   ],
                 ),
               ),
+              // Botão de mensagem
+              if (aula['aluno_usuario_id'] != null)
+                IconButton(
+                  onPressed: () {
+                    context.push(
+                      '${AppRoutes.conversa}/${aula['aluno_usuario_id']}',
+                      extra: {
+                        'nomeContato': aula['aluno'] ?? 'Aluno',
+                        'banido': false,
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  color: AppColors.primary,
+                  tooltip: 'Enviar mensagem',
+                ),
               _buildStatusBadge(status),
             ],
           ),
@@ -290,7 +308,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    aula['local_partida'] ?? 'Local a definir',
+                    aula['local'] ?? 'Local a definir',
                     style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -298,7 +316,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
               ],
             ),
           ),
-          if (status == 'aguardando') ...[
+          if (status == 'agendada') ...[
             const SizedBox(height: 12),
             Row(
               children: [
@@ -367,7 +385,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
         textColor = AppColors.success;
         label = 'Confirmada';
         break;
-      case 'aguardando':
+      case 'agendada':
         bgColor = AppColors.warningLight;
         textColor = AppColors.warning;
         label = 'Aguardando';

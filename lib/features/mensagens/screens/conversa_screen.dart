@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -36,14 +37,32 @@ class _ConversaScreenState extends State<ConversaScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   bool _isBanned = false;
+  bool _showRulesModal = false;
   Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _isBanned = widget.banido;
+    _checkRulesModal();
     _loadMensagens();
     _startPolling();
+  }
+
+  Future<void> _checkRulesModal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenRules = prefs.getBool('instrutor_viu_regras_mensagens') ?? false;
+    if (!hasSeenRules && mounted) {
+      setState(() => _showRulesModal = true);
+    }
+  }
+
+  Future<void> _acceptRules() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('instrutor_viu_regras_mensagens', true);
+    if (mounted) {
+      setState(() => _showRulesModal = false);
+    }
   }
 
   @override
@@ -301,7 +320,9 @@ class _ConversaScreenState extends State<ConversaScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: AppColors.gray100,
       appBar: AppBar(
         title: Row(
@@ -534,8 +555,142 @@ class _ConversaScreenState extends State<ConversaScreen> {
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
+      // Modal de Regras
+      if (_showRulesModal) _buildRulesModal(),
+    ]);
+  }
+
+  Widget _buildRulesModal() {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.all(32),
+          constraints: const BoxConstraints(maxWidth: 320),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.shield, color: Colors.white, size: 24),
+                    SizedBox(width: 10),
+                    Text(
+                      'Regras do Chat',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.block, color: Colors.red.shade600, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Proibido compartilhar telefone, e-mail ou redes sociais',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildWarningRow('1ª vez: Aviso', Colors.amber),
+                          const SizedBox(height: 6),
+                          _buildWarningRow('2ª vez: Último aviso', Colors.orange),
+                          const SizedBox(height: 6),
+                          _buildWarningRow('3ª vez: Banimento', Colors.red),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _acceptRules,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Entendi',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWarningRow(String text, MaterialColor color) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color.shade600,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(text, style: TextStyle(color: color.shade700, fontSize: 12)),
+      ],
     );
   }
 

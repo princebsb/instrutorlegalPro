@@ -173,6 +173,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _buildGreeting(user?.primeiroNome ?? 'Instrutor'),
+                    const SizedBox(height: 16),
+                    _buildAlertaAulasPendentes(),
                     const SizedBox(height: 24),
                     _buildStatsCards(),
                     const SizedBox(height: 24),
@@ -264,6 +266,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ],
     ).animate().fadeIn(duration: 500.ms);
+  }
+
+  Widget _buildAlertaAulasPendentes() {
+    // Contar aulas com status 'agendada' (aguardando confirmação)
+    final aulasPendentes = _proximasAulas.where((a) =>
+      (a['status'] ?? '').toString().toLowerCase() == 'agendada'
+    ).length;
+
+    if (aulasPendentes == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () => context.go(AppRoutes.aulas),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.warningLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.warning.withOpacity(0.5)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_active,
+                color: AppColors.warning,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    aulasPendentes == 1
+                        ? 'Você tem 1 aula aguardando confirmação!'
+                        : 'Você tem $aulasPendentes aulas aguardando confirmação!',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Text(
+                    'Toque para ver e confirmar',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.warning,
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn().shake(delay: 500.ms, duration: 500.ms, hz: 2);
   }
 
   Widget _buildStatsCards() {
@@ -487,9 +557,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAulaCard(Map<String, dynamic> aula) {
-    final dataHora = DateTime.tryParse(aula['data_hora'] ?? '') ?? DateTime.now();
-    final status = aula['status'] ?? 'aguardando';
-    final isPendente = status == 'aguardando';
+    final dataLabel = aula['data']?.toString() ?? '';
+    final horario = aula['horario']?.toString() ?? '';
+    final status = aula['status'] ?? 'agendada';
+    final isPendente = status == 'agendada';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -503,31 +574,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               Container(
-                width: 60,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                width: 70,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 decoration: BoxDecoration(
                   color: AppColors.primarySurface,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Column(
-                  children: [
-                    Text(
-                      DateFormat('dd').format(dataHora),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                child: Center(
+                  child: Text(
+                    dataLabel,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
-                    Text(
-                      DateFormat('MMM').format(dataHora).toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -536,7 +598,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      aula['aluno_nome'] ?? 'Aluno',
+                      aula['aluno'] ?? 'Aluno',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
@@ -548,7 +610,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Icon(Icons.access_time, size: 14, color: AppColors.gray500),
                         const SizedBox(width: 4),
                         Text(
-                          DateFormat('HH:mm').format(dataHora),
+                          horario,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         const SizedBox(width: 12),
@@ -556,7 +618,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            aula['local_partida'] ?? 'Local a definir',
+                            aula['local'] ?? 'Local a definir',
                             style: Theme.of(context).textTheme.bodySmall,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -566,6 +628,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
+              // Botão de mensagem
+              if (aula['aluno_usuario_id'] != null)
+                IconButton(
+                  onPressed: () {
+                    context.push(
+                      '${AppRoutes.conversa}/${aula['aluno_usuario_id']}',
+                      extra: {
+                        'nomeContato': aula['aluno'] ?? 'Aluno',
+                        'banido': false,
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  color: AppColors.primary,
+                  tooltip: 'Enviar mensagem',
+                ),
               _buildStatusBadge(status),
             ],
           ),
@@ -615,7 +693,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         textColor = AppColors.success;
         label = 'Confirmada';
         break;
-      case 'aguardando':
+      case 'agendada':
         bgColor = AppColors.warningLight;
         textColor = AppColors.warning;
         label = 'Aguardando';
@@ -688,13 +766,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Expanded(
               child: _buildActionButton(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'Minha Carteira',
+                color: AppColors.success,
+                onTap: () => context.go(AppRoutes.carteira),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionButton(
                 icon: Icons.people_outline,
                 label: 'Meus Alunos',
                 color: AppColors.warning,
                 onTap: () => context.go(AppRoutes.alunos),
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
             Expanded(
               child: _buildActionButton(
                 icon: Icons.settings_outlined,
@@ -703,6 +794,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () => context.go(AppRoutes.configuracoes),
               ),
             ),
+            const SizedBox(width: 12),
+            const Expanded(child: SizedBox()),
           ],
         ),
       ],

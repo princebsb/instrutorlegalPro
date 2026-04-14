@@ -262,8 +262,8 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                   ],
                 ),
               ),
-              // Botão de mensagem
-              if (aula['aluno_usuario_id'] != null)
+              // Botão de mensagem (só se aula paga)
+              if ((aula['pago'] == true || aula['pago'] == 1) && aula['aluno_usuario_id'] != null)
                 IconButton(
                   onPressed: () {
                     context.push(

@@ -200,8 +200,12 @@ class _ConversaScreenState extends State<ConversaScreen> {
           _showBannedAlert();
         }
 
-        // Avisar que aluno só responde após pagar (se não censurou e aula não paga)
-        if (!censurada && !_temAulaPaga && mounted) {
+        // Avisar se aluno está banido
+        if (_isBanned && mounted) {
+          _showAlunoBanidoAviso();
+        }
+        // Avisar que aluno só responde após pagar (se não censurou, aula não paga e aluno não banido)
+        else if (!censurada && !_temAulaPaga && mounted) {
           _showAulaNaoPagaAviso();
         }
       }
@@ -300,6 +304,28 @@ class _ConversaScreenState extends State<ConversaScreen> {
         ),
         backgroundColor: Colors.blue.shade600,
         duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showAlunoBanidoAviso() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.block, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Este aluno foi banido por violar as regras da plataforma.',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red.shade700,
+        duration: const Duration(seconds: 5),
         behavior: SnackBarBehavior.floating,
       ),
     );

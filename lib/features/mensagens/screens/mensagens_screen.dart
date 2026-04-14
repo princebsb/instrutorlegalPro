@@ -350,11 +350,12 @@ class _MensagensScreenState extends State<MensagensScreen> {
   }
 
   Widget _buildConversaItem(Map<String, dynamic> conversa) {
-    final nome = conversa['nome'] ?? 'Usuário';
+    // Backend retorna campos em snake_case
+    final nome = conversa['outro_usuario_nome'] ?? conversa['nome'] ?? 'Usuário';
     final visivel = nome.isNotEmpty;
-    final ultimaMensagem = conversa['ultimaMensagem'] ?? '';
-    final dataStr = conversa['dataUltimaMensagem']?.toString();
-    final naoLidasRaw = conversa['naoLidas'] ?? 0;
+    final ultimaMensagem = conversa['ultima_mensagem'] ?? conversa['ultimaMensagem'] ?? '';
+    final dataStr = conversa['ultima_mensagem_data']?.toString() ?? conversa['dataUltimaMensagem']?.toString();
+    final naoLidasRaw = conversa['nao_lidas'] ?? conversa['naoLidas'] ?? 0;
     final naoLidas = naoLidasRaw is int ? naoLidasRaw : int.tryParse(naoLidasRaw.toString()) ?? 0;
     final banido = conversa['banido'] == true;
     final temAulaPaga = conversa['temAulaPaga'] == true;
@@ -372,8 +373,10 @@ class _MensagensScreenState extends State<MensagensScreen> {
               : AppColors.white,
       child: InkWell(
         onTap: () {
+          // Backend retorna outro_usuario_id como ID da conversa
+          final conversaId = conversa['outro_usuario_id'] ?? conversa['id'];
           context.push(
-            '${AppRoutes.conversa}/${conversa['id']}',
+            '${AppRoutes.conversa}/$conversaId',
             extra: {'nomeContato': nome, 'banido': banido, 'temAulaPaga': temAulaPaga},
           );
         },

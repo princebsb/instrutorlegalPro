@@ -15,12 +15,14 @@ class ConversaScreen extends StatefulWidget {
   final String conversaId;
   final String nomeContato;
   final bool banido;
+  final bool temAulaPaga;
 
   const ConversaScreen({
     super.key,
     required this.conversaId,
     required this.nomeContato,
     this.banido = false,
+    this.temAulaPaga = false,
   });
 
   @override
@@ -38,12 +40,14 @@ class _ConversaScreenState extends State<ConversaScreen> {
   bool _isSending = false;
   bool _isBanned = false;
   bool _showRulesModal = false;
+  bool _temAulaPaga = false;
   Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _isBanned = widget.banido;
+    _temAulaPaga = widget.temAulaPaga;
     _checkRulesModal();
     _loadMensagens();
     _startPolling();
@@ -195,6 +199,11 @@ class _ConversaScreenState extends State<ConversaScreen> {
           setState(() => _isBanned = true);
           _showBannedAlert();
         }
+
+        // Avisar que aluno só responde após pagar (se não censurou e aula não paga)
+        if (!censurada && !_temAulaPaga && mounted) {
+          _showAulaNaoPagaAviso();
+        }
       }
     } catch (e) {
       // Verificar se erro é de banimento
@@ -269,6 +278,28 @@ class _ConversaScreenState extends State<ConversaScreen> {
         ),
         backgroundColor: Colors.red.shade900,
         duration: const Duration(seconds: 10),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showAulaNaoPagaAviso() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'O aluno só poderá responder após pagar a aula.',
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.blue.shade600,
+        duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
       ),
     );

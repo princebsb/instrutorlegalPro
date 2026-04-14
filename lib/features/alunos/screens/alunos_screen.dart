@@ -49,52 +49,23 @@ class _AlunosScreenState extends State<AlunosScreen> {
     }
 
     try {
+      debugPrint('[ALUNOS] Carregando alunos para userId: ${user.id}');
       final response = await _api.get(ApiEndpoints.alunos(user.id));
+      debugPrint('[ALUNOS] Resposta recebida: $response');
       final List<dynamic> data = response is List ? response : (response['alunos'] ?? []);
+      debugPrint('[ALUNOS] Total de alunos: ${data.length}');
 
       setState(() {
         _alunos = data.map((a) => Map<String, dynamic>.from(a)).toList();
         _alunosFiltrados = _alunos;
       });
-    } catch (e) {
-      // Mock data
+    } catch (e, stack) {
+      debugPrint('[ALUNOS] Erro ao carregar alunos: $e');
+      debugPrint('[ALUNOS] Stack: $stack');
+      // Não usar mock data - mostrar lista vazia
       setState(() {
-        _alunos = [
-          {
-            'id': '1',
-            'nome': 'Carlos Souza',
-            'categoria': 'B',
-            'aulas_realizadas': 12,
-            'progresso': 40.0,
-            'avaliacao': 4.8,
-            'telefone': '11999999999',
-            'email': 'carlos@email.com',
-            'proxima_aula': DateTime.now().add(const Duration(days: 1)).toIso8601String(),
-          },
-          {
-            'id': '2',
-            'nome': 'Ana Paula Lima',
-            'categoria': 'A',
-            'aulas_realizadas': 8,
-            'progresso': 27.0,
-            'avaliacao': 5.0,
-            'telefone': '11988888888',
-            'email': 'ana@email.com',
-            'proxima_aula': null,
-          },
-          {
-            'id': '3',
-            'nome': 'Pedro Santos',
-            'categoria': 'AB',
-            'aulas_realizadas': 20,
-            'progresso': 67.0,
-            'avaliacao': 4.5,
-            'telefone': '11977777777',
-            'email': 'pedro@email.com',
-            'proxima_aula': DateTime.now().add(const Duration(days: 3)).toIso8601String(),
-          },
-        ];
-        _alunosFiltrados = _alunos;
+        _alunos = [];
+        _alunosFiltrados = [];
       });
     } finally {
       setState(() => _isLoading = false);
@@ -195,9 +166,14 @@ class _AlunosScreenState extends State<AlunosScreen> {
   Widget _buildAlunoCard(Map<String, dynamic> aluno) {
     final nome = aluno['nome'] ?? 'Aluno';
     final categoria = aluno['categoria'] ?? 'B';
-    final aulasRealizadas = aluno['aulas_realizadas'] ?? 0;
-    final progresso = (aluno['progresso'] ?? 0.0).toDouble();
-    final avaliacao = aluno['avaliacao'] != null ? (aluno['avaliacao']).toDouble() : null;
+    // Backend retorna 'aulasRealizadas' em camelCase
+    final aulasRealizadasRaw = aluno['aulasRealizadas'] ?? aluno['aulas_realizadas'] ?? 0;
+    final aulasRealizadas = aulasRealizadasRaw is int ? aulasRealizadasRaw : int.tryParse(aulasRealizadasRaw.toString()) ?? 0;
+    // Calcular progresso baseado em 30 aulas necessárias para o exame
+    final progresso = (aulasRealizadas / 30 * 100).clamp(0.0, 100.0);
+    // Backend retorna avaliacao como string
+    final avaliacaoStr = aluno['avaliacao']?.toString();
+    final avaliacao = avaliacaoStr != null && avaliacaoStr != '0.0' ? double.tryParse(avaliacaoStr) : null;
     final iniciais = _getIniciais(nome);
 
     return Container(
@@ -300,23 +276,18 @@ class _AlunosScreenState extends State<AlunosScreen> {
 
           const Spacer(),
 
-          // Actions
+          // Actions - Apenas chat pela plataforma (segurança)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildIconAction(Icons.phone, () {
-                final tel = aluno['telefone'];
-                if (tel != null) launchUrl(Uri.parse('tel:$tel'));
-              }),
               _buildIconAction(Icons.chat_bubble_outline, () {
+                // Usar usuario_id para a conversa, não o aluno_id
+                final conversaId = aluno['usuario_id']?.toString() ?? aluno['id']?.toString();
+                final temAulaPaga = aluno['tem_aula_paga'] == true;
                 context.push(
-                  '${AppRoutes.conversa}/${aluno['id']}',
-                  extra: {'nomeContato': nome},
+                  '${AppRoutes.conversa}/$conversaId',
+                  extra: {'nomeContato': nome, 'temAulaPaga': temAulaPaga},
                 );
-              }),
-              _buildIconAction(Icons.email_outlined, () {
-                final email = aluno['email'];
-                if (email != null) launchUrl(Uri.parse('mailto:$email'));
               }),
             ],
           ),

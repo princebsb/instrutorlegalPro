@@ -637,6 +637,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       extra: {
                         'nomeContato': aula['aluno'] ?? 'Aluno',
                         'banido': false,
+                        'temAulaPaga': true,
                       },
                     );
                   },

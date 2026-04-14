@@ -271,6 +271,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                       extra: {
                         'nomeContato': aula['aluno'] ?? 'Aluno',
                         'banido': false,
+                        'temAulaPaga': true,
                       },
                     );
                   },

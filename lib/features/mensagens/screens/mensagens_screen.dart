@@ -357,6 +357,7 @@ class _MensagensScreenState extends State<MensagensScreen> {
     final naoLidasRaw = conversa['naoLidas'] ?? 0;
     final naoLidas = naoLidasRaw is int ? naoLidasRaw : int.tryParse(naoLidasRaw.toString()) ?? 0;
     final banido = conversa['banido'] == true;
+    final temAulaPaga = conversa['temAulaPaga'] == true;
 
     final data = dataStr != null ? DateTime.tryParse(dataStr) : null;
     final timeAgo = data != null ? _formatTimeAgo(data) : '';
@@ -373,7 +374,7 @@ class _MensagensScreenState extends State<MensagensScreen> {
         onTap: () {
           context.push(
             '${AppRoutes.conversa}/${conversa['id']}',
-            extra: {'nomeContato': nome, 'banido': banido},
+            extra: {'nomeContato': nome, 'banido': banido, 'temAulaPaga': temAulaPaga},
           );
         },
         child: Padding(

@@ -101,6 +101,7 @@ class AppRouter {
             conversaId: conversaId,
             nomeContato: extra?['nomeContato'] ?? 'Conversa',
             banido: extra?['banido'] ?? false,
+            temAulaPaga: extra?['temAulaPaga'] ?? false,
           );
         },
       ),

@@ -212,10 +212,6 @@ class _ConversaScreenState extends State<ConversaScreen> {
         if (_isBanned && mounted) {
           _showAlunoBanidoAviso();
         }
-        // Avisar que aluno só responde após pagar (se não censurou, aula não paga e aluno não banido)
-        else if (!censurada && !_temAulaPaga && mounted) {
-          _showAulaNaoPagaAviso();
-        }
       }
     } catch (e) {
       // Verificar se erro é de banimento

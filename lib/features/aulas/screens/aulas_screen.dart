@@ -345,29 +345,17 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
           ],
           if (status == 'confirmada') ...[
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _updateAulaStatus(aula['id'].toString(), 'cancelar'),
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Cancelar'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _updateAulaStatus(aula['id'].toString(), 'cancelar'),
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Cancelar'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _updateAulaStatus(aula['id'].toString(), 'realizar'),
-                    icon: const Icon(Icons.done_all, size: 18),
-                    label: const Text('Realizada'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ],

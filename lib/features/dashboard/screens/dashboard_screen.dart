@@ -628,16 +628,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-              // Botão de mensagem (só se aula paga)
-              if ((aula['pago'] == true || aula['pago'] == 1) && aula['aluno_usuario_id'] != null)
+              // Botão de mensagem (se aula paga ou confirmada)
+              if (((aula['pago'] == true || aula['pago'] == 1) || status == 'confirmada') && aula['aluno_usuario_id'] != null)
                 IconButton(
                   onPressed: () {
+                    final aulaPaga = aula['pago'] == true || aula['pago'] == 1;
                     context.push(
                       '${AppRoutes.conversa}/${aula['aluno_usuario_id']}',
                       extra: {
                         'nomeContato': aula['aluno'] ?? 'Aluno',
                         'banido': aula['aluno_banido'] == true,
-                        'temAulaPaga': true,
+                        'temAulaPaga': aulaPaga,
                       },
                     );
                   },

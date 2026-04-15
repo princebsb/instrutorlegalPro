@@ -101,6 +101,14 @@ class _ConversaScreenState extends State<ConversaScreen> {
       final List<dynamic> data = response is List ? response : (response['mensagens'] ?? []);
       final newMessages = data.map((m) => Map<String, dynamic>.from(m)).toList();
 
+      // Atualizar temAulaPaga do servidor (mais confiável que o parâmetro)
+      if (response is Map && response['temAulaPaga'] != null) {
+        final serverTemAulaPaga = response['temAulaPaga'] == true || response['temAulaPaga'] == 1;
+        if (serverTemAulaPaga != _temAulaPaga) {
+          setState(() { _temAulaPaga = serverTemAulaPaga; });
+        }
+      }
+
       if (newMessages.length != _mensagens.length) {
         setState(() { _mensagens = newMessages; });
         _scrollToBottom();

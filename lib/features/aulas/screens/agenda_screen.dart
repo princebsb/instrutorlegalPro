@@ -252,7 +252,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Widget _buildAulaItem(Map<String, dynamic> aula) {
-    final dataHora = DateTime.tryParse(aula['data_hora'] ?? '') ?? DateTime.now();
+    final dataHora = DateTime.tryParse(aula['data'] ?? '') ?? DateTime.now();
     final status = (aula['status'] ?? 'aguardando').toString().toLowerCase();
 
     Color statusColor;
@@ -299,11 +299,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  aula['aluno_nome'] ?? 'Aluno',
+                  aula['aluno'] ?? 'Aluno',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Text(
-                  'Cat. ${aula['categoria'] ?? 'B'} • ${aula['local_partida'] ?? ''}',
+                  'Cat. ${aula['categoria'] ?? 'B'} • ${aula['local'] ?? ''}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),

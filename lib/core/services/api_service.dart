@@ -20,7 +20,14 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  final _storage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage(
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
   String? _authToken;
 
   Future<String?> get authToken async {
@@ -169,6 +176,19 @@ class ApiService {
   }
 
   dynamic _handleResponse(http.Response response) {
+    // Verifica se a resposta é HTML (erro do servidor)
+    final contentType = response.headers['content-type'] ?? '';
+    if (contentType.contains('text/html') ||
+        (response.body.isNotEmpty && response.body.trimLeft().startsWith('<'))) {
+      // Log para debug
+      print('API retornou HTML - Status: ${response.statusCode}');
+      print('URL: ${response.request?.url}');
+      throw ApiException(
+        'Erro de comunicação com o servidor (${response.statusCode})',
+        statusCode: response.statusCode,
+      );
+    }
+
     final body = response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
     switch (response.statusCode) {
@@ -176,19 +196,47 @@ class ApiService {
       case 201:
         return body;
       case 400:
-        throw ApiException(body?['error'] ?? 'Requisição inválida', statusCode: 400, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Requisição inválida',
+          statusCode: 400,
+          data: body,
+        );
       case 401:
-        throw ApiException(body?['error'] ?? 'Não autorizado', statusCode: 401, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Não autorizado',
+          statusCode: 401,
+          data: body,
+        );
       case 403:
-        throw ApiException(body?['error'] ?? 'Acesso negado', statusCode: 403, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Acesso negado',
+          statusCode: 403,
+          data: body,
+        );
       case 404:
-        throw ApiException(body?['error'] ?? 'Não encontrado', statusCode: 404, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Não encontrado',
+          statusCode: 404,
+          data: body,
+        );
       case 409:
-        throw ApiException(body?['error'] ?? 'Conflito de dados', statusCode: 409, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Conflito de dados',
+          statusCode: 409,
+          data: body,
+        );
       case 500:
-        throw ApiException('Erro interno do servidor', statusCode: 500, data: body);
+        throw ApiException(
+          'Erro interno do servidor',
+          statusCode: 500,
+          data: body,
+        );
       default:
-        throw ApiException(body?['error'] ?? 'Erro desconhecido', statusCode: response.statusCode, data: body);
+        throw ApiException(
+          body?['error'] ?? 'Erro desconhecido',
+          statusCode: response.statusCode,
+          data: body,
+        );
     }
   }
 }

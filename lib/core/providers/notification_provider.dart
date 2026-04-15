@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../constants/app_constants.dart';
 
 class NotificationModel {
@@ -70,13 +71,38 @@ class NotificationProvider extends ChangeNotifier {
       final response = await _api.get(ApiEndpoints.notificacoes(userId));
       final List<dynamic> data = response['notificacoes'] ?? [];
 
-      _notifications =
+      final newNotifications =
           data.map((json) => NotificationModel.fromJson(json)).toList();
 
+      // Verificar se há novas notificações não lidas
+      final oldUnreadIds = _notifications
+          .where((n) => !n.lida)
+          .map((n) => n.id)
+          .toSet();
+
+      for (final notif in newNotifications.where((n) => !n.lida)) {
+        if (!oldUnreadIds.contains(notif.id)) {
+          // Nova notificação - mostrar push local
+          _showLocalNotification(notif);
+        }
+      }
+
+      _notifications = newNotifications;
       _unreadCount = _notifications.where((n) => !n.lida).length;
       notifyListeners();
     } catch (e) {
       // Silencioso
+    }
+  }
+
+  void _showLocalNotification(NotificationModel notif) {
+    // Mostrar notificação local para novas aulas
+    if (notif.tipo == 'nova_aula' || notif.tipo == 'aula_agendada') {
+      NotificationService.showNotification(
+        title: notif.titulo,
+        body: notif.mensagem,
+        payload: notif.id,
+      );
     }
   }
 

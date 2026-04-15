@@ -72,6 +72,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
   int _aprovados = 0;
   int _experiencia = 0;
 
+  // Chave PIX
+  String? _chavePix;
+  String? _tipoChavePix;
+
   @override
   void initState() {
     super.initState();
@@ -251,6 +255,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   .map((e) => e.trim())
                   .toList();
             }
+          }
+
+          // Carregar dados do instrutor (incluindo chave PIX)
+          if (response['instrutor'] != null) {
+            _chavePix = response['instrutor']['chave_pix'];
+            _tipoChavePix = response['instrutor']['tipo_chave_pix'];
           }
         });
       }
@@ -587,6 +597,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 prefixIcon: const Icon(Icons.attach_money),
               ),
 
+              const SizedBox(height: 24),
+
+              // Chave PIX
+              _buildSectionTitle('Chave PIX'),
+              const SizedBox(height: 12),
+              _buildChavePixCard(),
+
               const SizedBox(height: 32),
 
               if (_isEditing)
@@ -652,5 +669,320 @@ class _PerfilScreenState extends State<PerfilScreen> {
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
     );
+  }
+
+  Widget _buildChavePixCard() {
+    final hasChavePix = _chavePix != null && _chavePix!.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: hasChavePix ? AppColors.successLight : AppColors.warningLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasChavePix
+              ? AppColors.success.withOpacity(0.3)
+              : AppColors.warning.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: hasChavePix
+                  ? AppColors.success.withOpacity(0.2)
+                  : AppColors.warning.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.pix,
+              color: hasChavePix ? AppColors.success : AppColors.warning,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasChavePix ? 'Chave PIX Cadastrada' : 'Cadastre sua Chave PIX',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: hasChavePix ? AppColors.success : AppColors.warning,
+                  ),
+                ),
+                if (hasChavePix)
+                  Text(
+                    '${_getTipoChaveLabel(_tipoChavePix)}: ${_mascaraChavePix(_chavePix!)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                else
+                  const Text(
+                    'Configure para receber seus pagamentos',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showPixConfigModal,
+            child: Text(hasChavePix ? 'Alterar' : 'Cadastrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTipoChaveLabel(String? tipo) {
+    switch (tipo?.toLowerCase()) {
+      case 'cpf':
+        return 'CPF';
+      case 'cnpj':
+        return 'CNPJ';
+      case 'email':
+        return 'E-mail';
+      case 'telefone':
+        return 'Telefone';
+      case 'aleatoria':
+        return 'Chave Aleatória';
+      default:
+        return 'Chave';
+    }
+  }
+
+  String _mascaraChavePix(String chave) {
+    if (chave.length <= 8) return chave;
+    return '${chave.substring(0, 4)}****${chave.substring(chave.length - 4)}';
+  }
+
+  void _showPixConfigModal() {
+    final chaveController = TextEditingController(text: _chavePix);
+    String tipoSelecionado = _tipoChavePix ?? 'cpf';
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.gray300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Configurar Chave PIX',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Configure sua chave PIX para receber os pagamentos das aulas.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Tipo de chave
+                  const Text(
+                    'Tipo de Chave',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildTipoChip('cpf', 'CPF', tipoSelecionado, (t) {
+                        setModalState(() => tipoSelecionado = t);
+                      }),
+                      _buildTipoChip('cnpj', 'CNPJ', tipoSelecionado, (t) {
+                        setModalState(() => tipoSelecionado = t);
+                      }),
+                      _buildTipoChip('email', 'E-mail', tipoSelecionado, (t) {
+                        setModalState(() => tipoSelecionado = t);
+                      }),
+                      _buildTipoChip('telefone', 'Telefone', tipoSelecionado, (t) {
+                        setModalState(() => tipoSelecionado = t);
+                      }),
+                      _buildTipoChip('aleatoria', 'Aleatória', tipoSelecionado, (t) {
+                        setModalState(() => tipoSelecionado = t);
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Campo da chave
+                  CustomTextField(
+                    label: 'Chave PIX',
+                    controller: chaveController,
+                    hint: _getHintByTipo(tipoSelecionado),
+                    keyboardType: _getKeyboardByTipo(tipoSelecionado),
+                    prefixIcon: const Icon(Icons.pix),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Botões
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(color: AppColors.gray300),
+                          ),
+                          child: const Text('Cancelar'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Salvar',
+                          isLoading: isLoading,
+                          onPressed: () async {
+                            setModalState(() => isLoading = true);
+
+                            try {
+                              final user = context.read<AuthProvider>().user;
+                              if (user == null) return;
+
+                              await _api.patch(
+                                ApiEndpoints.chavePix(user.id),
+                                body: {
+                                  'chave_pix': chaveController.text,
+                                  'tipo_chave_pix': tipoSelecionado,
+                                },
+                              );
+
+                              setState(() {
+                                _chavePix = chaveController.text;
+                                _tipoChavePix = tipoSelecionado;
+                              });
+
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Chave PIX salva com sucesso!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Erro ao salvar: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              setModalState(() => isLoading = false);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTipoChip(
+    String tipo,
+    String label,
+    String selecionado,
+    Function(String) onSelect,
+  ) {
+    final isSelected = tipo == selecionado;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onSelect(tipo),
+      selectedColor: AppColors.primarySurface,
+      checkmarkColor: AppColors.primary,
+      labelStyle: TextStyle(
+        color: isSelected ? AppColors.primary : AppColors.textSecondary,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+
+  String _getHintByTipo(String tipo) {
+    switch (tipo) {
+      case 'cpf':
+        return '000.000.000-00';
+      case 'cnpj':
+        return '00.000.000/0000-00';
+      case 'email':
+        return 'seu@email.com';
+      case 'telefone':
+        return '+55 11 99999-9999';
+      case 'aleatoria':
+        return 'Cole sua chave aleatória';
+      default:
+        return '';
+    }
+  }
+
+  TextInputType _getKeyboardByTipo(String tipo) {
+    switch (tipo) {
+      case 'cpf':
+      case 'cnpj':
+      case 'telefone':
+        return TextInputType.number;
+      case 'email':
+        return TextInputType.emailAddress;
+      default:
+        return TextInputType.text;
+    }
   }
 }

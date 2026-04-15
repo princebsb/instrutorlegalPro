@@ -2,6 +2,9 @@ class AppConstants {
   AppConstants._();
 
   // API
+  // Produção: https://instrutorlegal.org
+  // Local Android Emulator: http://10.0.2.2:3000
+  // Local dispositivo físico: http://SEU_IP:3000
   static const String baseUrl = 'https://instrutorlegal.org';
   static const String apiUrl = '$baseUrl/api';
   static const Duration apiTimeout = Duration(seconds: 30);
@@ -10,6 +13,7 @@ class AppConstants {
   static const String authTokenKey = 'auth_token';
   static const String userDataKey = 'user_data';
   static const String notificationPrefsKey = 'notification_prefs';
+  static const String onboardingCompleteKey = 'onboarding_complete';
 
   // App Info
   static const String appName = 'Instrutor Legal Pro';
@@ -68,4 +72,11 @@ class ApiEndpoints {
   // Notificações
   static String notificacoes(String userId) => '/notificacoes/$userId';
   static String marcarLida(String notifId) => '/notificacoes/$notifId/lida';
+
+  // Carteira e PIX
+  static String carteira(String userId) => '/instrutor/carteira/$userId';
+  static String chavePix(String userId) => '/instrutor/chave-pix/$userId';
+
+  // Foto de perfil
+  static String perfilFoto(String userId) => '/instrutor/perfil/$userId/foto';
 }

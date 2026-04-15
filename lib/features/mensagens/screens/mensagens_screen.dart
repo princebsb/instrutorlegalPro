@@ -357,8 +357,9 @@ class _MensagensScreenState extends State<MensagensScreen> {
     final dataStr = conversa['ultima_mensagem_data']?.toString() ?? conversa['dataUltimaMensagem']?.toString();
     final naoLidasRaw = conversa['nao_lidas'] ?? conversa['naoLidas'] ?? 0;
     final naoLidas = naoLidasRaw is int ? naoLidasRaw : int.tryParse(naoLidasRaw.toString()) ?? 0;
-    final banido = conversa['banido'] == true;
-    final temAulaPaga = conversa['temAulaPaga'] == true;
+    final banido = conversa['banido'] == true || conversa['banido'] == 1;
+    final temAulaPagaRaw = conversa['temAulaPaga'] ?? conversa['tem_aula_paga'];
+    final temAulaPaga = temAulaPagaRaw == true || temAulaPagaRaw == 1 || temAulaPagaRaw == 'true';
 
     final data = dataStr != null ? DateTime.tryParse(dataStr) : null;
     final timeAgo = data != null ? _formatTimeAgo(data) : '';

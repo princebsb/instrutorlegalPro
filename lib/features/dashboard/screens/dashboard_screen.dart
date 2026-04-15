@@ -613,14 +613,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           horario,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        const SizedBox(width: 12),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         const Icon(Icons.location_on_outlined, size: 14, color: AppColors.gray500),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             aula['local'] ?? 'Local a definir',
                             style: Theme.of(context).textTheme.bodySmall,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: 3,
                           ),
                         ),
                       ],

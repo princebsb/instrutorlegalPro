@@ -73,6 +73,10 @@ class ApiEndpoints {
   static String notificacoes(String userId) => '/notificacoes/$userId';
   static String marcarLida(String notifId) => '/notificacoes/$notifId/lida';
 
+  // FCM Token
+  static const String fcmRegister = '/fcm/register';
+  static const String fcmUnregister = '/fcm/unregister';
+
   // Carteira e PIX
   static String carteira(String userId) => '/instrutor/carteira/$userId';
   static String chavePix(String userId) => '/instrutor/chave-pix/$userId';

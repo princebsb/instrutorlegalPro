@@ -309,7 +309,7 @@ class _AulasScreenState extends State<AulasScreen> with SingleTickerProviderStat
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    aula['local'] ?? 'Local a definir',
+                    (aula['pago'] == true || aula['pago'] == 1) ? (aula['local'] ?? 'Local a definir') : 'Endereço liberado após pagamento',
                     style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),

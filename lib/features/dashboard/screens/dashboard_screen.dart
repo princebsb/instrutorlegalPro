@@ -623,7 +623,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            aula['local'] ?? 'Local a definir',
+                            (aula['pago'] == true || aula['pago'] == 1) ? (aula['local'] ?? 'Local a definir') : 'Endereço liberado após pagamento',
                             style: Theme.of(context).textTheme.bodySmall,
                             maxLines: 3,
                           ),

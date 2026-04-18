@@ -86,6 +86,297 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _mostrarDetalhesAula(Map<String, dynamic> aula) {
+    final dataLabel = aula['data']?.toString() ?? '';
+    final horario = aula['horario']?.toString() ?? '';
+    final status = aula['status']?.toString() ?? 'agendada';
+    final valor = double.tryParse(aula['valor']?.toString() ?? '') ?? 0.0;
+    final pago = aula['pago'] == true || aula['pago'] == 1;
+    final isPendente = status.toLowerCase() == 'agendada';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.gray300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Título
+            const Text(
+              'Detalhes da Aula',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Status
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: status.toLowerCase() == 'confirmada'
+                    ? AppColors.success.withOpacity(0.1)
+                    : status.toLowerCase() == 'agendada'
+                        ? AppColors.warning.withOpacity(0.1)
+                        : AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                status.toLowerCase() == 'confirmada'
+                    ? 'Confirmada'
+                    : status.toLowerCase() == 'agendada'
+                        ? 'Aguardando confirmação'
+                        : status,
+                style: TextStyle(
+                  color: status.toLowerCase() == 'confirmada'
+                      ? AppColors.success
+                      : status.toLowerCase() == 'agendada'
+                          ? AppColors.warning
+                          : AppColors.info,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Aluno
+            _buildDetalheItem(
+              icon: Icons.person,
+              label: 'Aluno',
+              value: aula['aluno']?.toString() ?? 'Não informado',
+            ),
+
+            // Data
+            _buildDetalheItem(
+              icon: Icons.calendar_today,
+              label: 'Data',
+              value: dataLabel,
+            ),
+
+            // Horário
+            _buildDetalheItem(
+              icon: Icons.access_time,
+              label: 'Horário',
+              value: horario,
+            ),
+
+            // Local
+            _buildDetalheItem(
+              icon: Icons.location_on,
+              label: 'Local de partida',
+              value: pago ? (aula['local']?.toString() ?? 'Não informado') : 'Liberado após pagamento',
+            ),
+
+            // Valor
+            _buildDetalheItem(
+              icon: Icons.attach_money,
+              label: 'Valor',
+              value: 'R\$ ${valor.toStringAsFixed(2)}',
+            ),
+
+            // Status do pagamento
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: pago
+                    ? AppColors.success.withOpacity(0.1)
+                    : AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: pago
+                      ? AppColors.success.withOpacity(0.3)
+                      : AppColors.warning.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    pago ? Icons.check_circle : Icons.pending,
+                    color: pago ? AppColors.success : AppColors.warning,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      pago ? 'Aula paga pelo aluno' : 'Aguardando pagamento do aluno',
+                      style: TextStyle(
+                        color: pago ? AppColors.success : AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Botão Mensagem (só se aula paga ou confirmada)
+            if ((pago || status.toLowerCase() == 'confirmada') && aula['aluno_usuario_id'] != null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push(
+                      '${AppRoutes.conversa}/${aula['aluno_usuario_id']}',
+                      extra: {
+                        'nomeContato': aula['aluno'] ?? 'Aluno',
+                        'banido': aula['aluno_banido'] == true,
+                        'temAulaPaga': pago,
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('Enviar Mensagem'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
+            // Botões de ação para aulas pendentes
+            if (isPendente) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _updateAulaStatus(aula['id'].toString(), 'cancelar');
+                      },
+                      icon: const Icon(Icons.close, size: 18),
+                      label: const Text('Recusar'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _updateAulaStatus(aula['id'].toString(), 'confirmar');
+                      },
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Confirmar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Botão fechar
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Fechar'),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetalheItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primarySurface,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _updateAulaStatus(String aulaId, String action) async {
     try {
       String endpoint;
@@ -549,7 +840,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final aula = _proximasAulas[index];
-              return _buildAulaCard(aula);
+              return GestureDetector(
+                onTap: () => _mostrarDetalhesAula(aula),
+                child: _buildAulaCard(aula),
+              );
             },
           ),
       ],
